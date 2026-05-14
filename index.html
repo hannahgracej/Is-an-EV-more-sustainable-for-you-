@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Is an EV More Sustainable for You?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Is an EV More Sustainable <span class="accent">for You?</span></h1>
+      <p class="subtitle">Compare the lifetime carbon footprint of keeping your current car versus switching to an electric vehicle.</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Step 1: Current Car -->
+    <section id="step-current" class="card step active-step">
+      <div class="step-badge">1</div>
+      <h2>Your Current Car</h2>
+      <p class="step-desc">Tell us about the car you drive today.</p>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="cur-fuel">Fuel Type</label>
+          <select id="cur-fuel">
+            <option value="">Select&hellip;</option>
+            <option value="gasoline">Gasoline</option>
+            <option value="diesel">Diesel</option>
+            <option value="hybrid">Hybrid</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="cur-year">Model Year</label>
+          <select id="cur-year"></select>
+        </div>
+
+        <div class="field">
+          <label for="cur-size">Vehicle Size</label>
+          <select id="cur-size">
+            <option value="">Select&hellip;</option>
+            <option value="small">Small / Compact</option>
+            <option value="midsize">Midsize Sedan</option>
+            <option value="large">Large Sedan / Wagon</option>
+            <option value="suv">SUV / Crossover</option>
+            <option value="truck">Truck / Full-size</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="cur-mpg">Fuel Economy (MPG)</label>
+          <input id="cur-mpg" type="number" min="5" max="80" placeholder="e.g. 28" />
+          <span class="hint">Leave blank for an estimate based on size &amp; year</span>
+        </div>
+
+        <div class="field">
+          <label for="cur-miles">Miles Driven per Year</label>
+          <input id="cur-miles" type="number" min="500" max="100000" placeholder="e.g. 12000" value="12000" />
+        </div>
+
+        <div class="field">
+          <label for="cur-age">Years You've Owned It</label>
+          <input id="cur-age" type="number" min="0" max="40" placeholder="e.g. 5" value="5" />
+        </div>
+      </div>
+
+      <button class="btn primary" onclick="goToStep(2)">Next &rarr;</button>
+    </section>
+
+    <!-- Step 2: New EV -->
+    <section id="step-ev" class="card step">
+      <div class="step-badge">2</div>
+      <h2>The EV You're Considering</h2>
+      <p class="step-desc">Pick an electric vehicle you're thinking about buying.</p>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="ev-model">EV Model</label>
+          <select id="ev-model">
+            <option value="">Select&hellip;</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="ev-range">EPA Range (miles)</label>
+          <input id="ev-range" type="number" min="50" max="600" placeholder="Auto-filled" readonly />
+          <span class="hint">Auto-filled from selected model</span>
+        </div>
+
+        <div class="field">
+          <label for="ev-battery">Battery Size (kWh)</label>
+          <input id="ev-battery" type="number" min="20" max="250" placeholder="Auto-filled" readonly />
+          <span class="hint">Auto-filled from selected model</span>
+        </div>
+
+        <div class="field">
+          <label for="ev-miles">Miles You'd Drive per Year</label>
+          <input id="ev-miles" type="number" min="500" max="100000" placeholder="e.g. 12000" value="12000" />
+        </div>
+
+        <div class="field">
+          <label for="ev-years">Years You Plan to Keep It</label>
+          <input id="ev-years" type="number" min="1" max="30" placeholder="e.g. 10" value="10" />
+        </div>
+
+        <div class="field">
+          <label for="grid-mix">Your Electricity Grid</label>
+          <select id="grid-mix">
+            <option value="">Select region&hellip;</option>
+            <option value="us-avg">US Average</option>
+            <option value="california">California</option>
+            <option value="texas">Texas</option>
+            <option value="northeast">Northeast US</option>
+            <option value="midwest">Midwest US</option>
+            <option value="southeast">Southeast US</option>
+            <option value="northwest">Northwest US</option>
+            <option value="eu-avg">EU Average</option>
+            <option value="uk">United Kingdom</option>
+            <option value="renewable">100% Renewable</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn secondary" onclick="goToStep(1)">&larr; Back</button>
+        <button class="btn primary" onclick="runAnalysis()">Analyze</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="results" class="card step">
+      <div class="step-badge check">&#10003;</div>
+      <h2>Your Carbon Comparison</h2>
+      <p class="step-desc" id="results-summary"></p>
+
+      <div class="results-grid">
+        <div class="result-card keep">
+          <h3>Keep Current Car</h3>
+          <div class="big-number" id="keep-total"></div>
+          <span class="unit">tonnes CO<sub>2</sub></span>
+          <ul id="keep-breakdown"></ul>
+        </div>
+        <div class="result-card vs">
+          <span class="vs-label">VS</span>
+        </div>
+        <div class="result-card switch">
+          <h3>Switch to EV</h3>
+          <div class="big-number" id="switch-total"></div>
+          <span class="unit">tonnes CO<sub>2</sub></span>
+          <ul id="switch-breakdown"></ul>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <h3>Cumulative Emissions Over Time</h3>
+        <canvas id="emissions-chart" width="800" height="400"></canvas>
+      </div>
+
+      <div class="chart-section">
+        <h3>Emissions Breakdown</h3>
+        <div class="breakdown-charts">
+          <div>
+            <h4>Keep Current Car</h4>
+            <canvas id="breakdown-keep" width="350" height="350"></canvas>
+          </div>
+          <div>
+            <h4>Switch to EV</h4>
+            <canvas id="breakdown-switch" width="350" height="350"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div id="verdict-box" class="verdict"></div>
+
+      <div class="btn-row">
+        <button class="btn secondary" onclick="goToStep(1)">&larr; Start Over</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data sourced from EPA, GREET model (Argonne National Lab), IEA, and peer-reviewed LCA studies. Estimates are illustrative and may vary based on real-world conditions.</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="calc.js"></script>
+  <script src="chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
