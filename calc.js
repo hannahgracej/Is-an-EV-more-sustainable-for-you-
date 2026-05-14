@@ -68,6 +68,43 @@ function runComparison(inputs) {
 
   const savings = keepTotal - switchTotal;
 
+  // --- LONG-TERM COST COMPARISON ---
+  const gasPrice = inputs.gasPrice || FUEL_PRICE_PER_GALLON[curFuel] || 3.50;
+  const elecPrice = inputs.elecPrice || ELECTRICITY_PRICE[gridMix] || 0.16;
+  const evPurchasePrice = inputs.evPrice || ev.msrp || 40000;
+
+  // Keep: annual fuel cost
+  const keepFuelCostPerYear = gallonsPerYear * gasPrice;
+  const keepMaintenanceCostPerYear = MAINTENANCE_COST.ice;
+  const keepInsuranceCostPerYear = INSURANCE_COST.ice;
+  const keepAnnualCost = keepFuelCostPerYear + keepMaintenanceCostPerYear + keepInsuranceCostPerYear;
+
+  // Switch: upfront + annual running cost
+  const evElecCostPerYear = evMilesPerYear * kwhPerMileFromGrid * elecPrice;
+  const evMaintenanceCostPerYear = MAINTENANCE_COST.ev;
+  const evInsuranceCostPerYear = INSURANCE_COST.ev;
+  const evAnnualRunning = evElecCostPerYear + evMaintenanceCostPerYear + evInsuranceCostPerYear;
+
+  const keepTotalCost = keepAnnualCost * comparisonYears;
+  const switchTotalCost = evPurchasePrice + evAnnualRunning * comparisonYears;
+
+  const keepCostCumulative = [];
+  const switchCostCumulative = [];
+  for (let y = 1; y <= comparisonYears; y++) {
+    keepCostCumulative.push(+(keepAnnualCost * y).toFixed(0));
+    switchCostCumulative.push(+(evPurchasePrice + evAnnualRunning * y).toFixed(0));
+  }
+
+  // Cost breakeven: year when cumulative EV cost < cumulative keep cost
+  let costBreakevenYear = null;
+  const annualCostDiff = keepAnnualCost - evAnnualRunning;
+  if (annualCostDiff > 0) {
+    costBreakevenYear = evPurchasePrice / annualCostDiff;
+    costBreakevenYear = Math.round(costBreakevenYear * 10) / 10;
+  }
+
+  const costSavings = keepTotalCost - switchTotalCost;
+
   return {
     comparisonYears,
     mpgUsed: mpg,
@@ -94,5 +131,30 @@ function runComparison(inputs) {
     savings: +savings.toFixed(2),
     breakevenYear,
     evIsBetter: savings > 0,
+
+    cost: {
+      keep: {
+        fuelPerYear: +keepFuelCostPerYear.toFixed(0),
+        maintenancePerYear: keepMaintenanceCostPerYear,
+        insurancePerYear: keepInsuranceCostPerYear,
+        annualTotal: +keepAnnualCost.toFixed(0),
+        total: +keepTotalCost.toFixed(0),
+        cumulative: keepCostCumulative,
+      },
+      ev: {
+        purchasePrice: evPurchasePrice,
+        electricityPerYear: +evElecCostPerYear.toFixed(0),
+        maintenancePerYear: evMaintenanceCostPerYear,
+        insurancePerYear: evInsuranceCostPerYear,
+        annualRunning: +evAnnualRunning.toFixed(0),
+        total: +switchTotalCost.toFixed(0),
+        cumulative: switchCostCumulative,
+      },
+      savings: +costSavings.toFixed(0),
+      evCheaper: costSavings > 0,
+      breakevenYear: costBreakevenYear,
+      gasPrice,
+      elecPrice,
+    },
   };
 }

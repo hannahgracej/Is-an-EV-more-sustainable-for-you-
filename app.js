@@ -32,6 +32,13 @@
     const ev = EV_MODELS.find(m => m.name === this.value);
     document.getElementById("ev-range").value = ev ? ev.range : "";
     document.getElementById("ev-battery").value = ev ? ev.battery : "";
+    document.getElementById("ev-price").value = ev ? ev.msrp : "";
+  });
+
+  // Auto-fill electricity rate when grid region changes
+  document.getElementById("grid-mix").addEventListener("change", function () {
+    const rate = ELECTRICITY_PRICE[this.value];
+    if (rate) document.getElementById("elec-price").placeholder = "$" + rate.toFixed(2) + "/kWh avg";
   });
 
   // Sync EV miles with current miles
@@ -87,6 +94,9 @@ function gatherInputs() {
     evMilesPerYear: parseInt(document.getElementById("ev-miles").value),
     evYears: parseInt(document.getElementById("ev-years").value),
     gridMix: document.getElementById("grid-mix").value,
+    gasPrice: parseFloat(document.getElementById("gas-price").value) || 0,
+    evPrice: parseFloat(document.getElementById("ev-price").value) || 0,
+    elecPrice: parseFloat(document.getElementById("elec-price").value) || 0,
   };
 }
 
@@ -159,6 +169,52 @@ function renderResults(r, inputs) {
     { label: "Electricity", value: r.ev.driving, color: COLORS.driving },
     { label: "Maintenance", value: r.ev.maintenance, color: COLORS.maint },
   ], r.ev.total);
+
+  // --- Cost comparison ---
+  const c = r.cost;
+  const fmt = (n) => "$" + n.toLocaleString();
+
+  document.getElementById("keep-cost-total").textContent = fmt(c.keep.total);
+  document.getElementById("switch-cost-total").textContent = fmt(c.ev.total);
+
+  const keepCostUl = document.getElementById("keep-cost-breakdown");
+  keepCostUl.innerHTML = `
+    <li>Fuel (${c.gasPrice.toFixed(2)}/gal) <span>${fmt(c.keep.fuelPerYear)}/yr</span></li>
+    <li>Maintenance <span>${fmt(c.keep.maintenancePerYear)}/yr</span></li>
+    <li>Insurance <span>${fmt(c.keep.insurancePerYear)}/yr</span></li>
+    <li class="li-total">Annual total <span>${fmt(c.keep.annualTotal)}/yr</span></li>
+  `;
+
+  const switchCostUl = document.getElementById("switch-cost-breakdown");
+  switchCostUl.innerHTML = `
+    <li>Purchase price <span>${fmt(c.ev.purchasePrice)}</span></li>
+    <li>Electricity (${c.elecPrice.toFixed(2)}/kWh) <span>${fmt(c.ev.electricityPerYear)}/yr</span></li>
+    <li>Maintenance <span>${fmt(c.ev.maintenancePerYear)}/yr</span></li>
+    <li>Insurance <span>${fmt(c.ev.insurancePerYear)}/yr</span></li>
+    <li class="li-total">Annual running <span>${fmt(c.ev.annualRunning)}/yr</span></li>
+  `;
+
+  // Cost verdict
+  const costVerdict = document.getElementById("cost-verdict-box");
+  if (c.evCheaper) {
+    costVerdict.className = "verdict better";
+    costVerdict.innerHTML = `<strong>The EV saves you ~${fmt(c.savings)} over ${r.comparisonYears} years</strong> in total cost of ownership.` +
+      (c.breakevenYear && c.breakevenYear <= r.comparisonYears
+        ? ` The EV's higher purchase price is paid back in <strong>~${c.breakevenYear} years</strong> through lower running costs.`
+        : "");
+  } else if (c.savings < 0) {
+    costVerdict.className = "verdict worse";
+    costVerdict.innerHTML = `<strong>Keeping your current car saves ~${fmt(Math.abs(c.savings))} over ${r.comparisonYears} years.</strong> The EV's purchase price outweighs the fuel savings in this timeframe.` +
+      (c.breakevenYear
+        ? ` The EV would break even at <strong>~${c.breakevenYear} years</strong> — consider keeping it longer.`
+        : " The EV's running costs aren't low enough to recoup the purchase price.");
+  } else {
+    costVerdict.className = "verdict neutral";
+    costVerdict.innerHTML = `<strong>Both options cost roughly the same</strong> over ${r.comparisonYears} years. Lower fuel and maintenance costs offset the EV's higher purchase price.`;
+  }
+
+  // Cost chart
+  drawCostChart("cost-chart", r);
 }
 
 // Redraw charts on window resize
@@ -172,6 +228,7 @@ window.addEventListener("resize", () => {
       try {
         const result = runComparison(inputs);
         drawLineChart("emissions-chart", result);
+        drawCostChart("cost-chart", result);
         drawDoughnut("breakdown-keep", [
           { label: "Fuel", value: result.keep.fuel, color: COLORS.fuel },
           { label: "Maintenance", value: result.keep.maintenance, color: COLORS.maint },
