@@ -13,7 +13,7 @@
   <header>
     <div class="header-inner">
       <h1>Is an EV More Sustainable <span class="accent">for You?</span></h1>
-      <p class="subtitle">Compare the lifetime carbon footprint of keeping your current car versus switching to an electric vehicle.</p>
+      <p class="subtitle">Compare the lifetime carbon footprint and long-term cost of keeping your current car versus switching to an electric vehicle.</p>
     </div>
   </header>
 
@@ -66,6 +66,12 @@
         <div class="field">
           <label for="cur-age">Years You've Owned It</label>
           <input id="cur-age" type="number" min="0" max="40" placeholder="e.g. 5" value="5" />
+        </div>
+
+        <div class="field">
+          <label for="gas-price">Fuel Price ($/gallon)</label>
+          <input id="gas-price" type="number" min="1" max="10" step="0.01" placeholder="e.g. 3.50" />
+          <span class="hint">Leave blank for national average</span>
         </div>
       </div>
 
@@ -124,6 +130,18 @@
             <option value="renewable">100% Renewable</option>
           </select>
         </div>
+
+        <div class="field">
+          <label for="ev-price">EV Purchase Price ($)</label>
+          <input id="ev-price" type="number" min="15000" max="300000" step="100" placeholder="Auto-filled MSRP" />
+          <span class="hint">Auto-filled from model; edit to use your actual price</span>
+        </div>
+
+        <div class="field">
+          <label for="elec-price">Electricity Rate ($/kWh)</label>
+          <input id="elec-price" type="number" min="0.01" max="1.00" step="0.01" placeholder="Auto from region" />
+          <span class="hint">Leave blank for regional average</span>
+        </div>
       </div>
 
       <div class="btn-row">
@@ -176,6 +194,35 @@
       </div>
 
       <div id="verdict-box" class="verdict"></div>
+
+      <div class="section-divider">
+        <span>Long-Term Cost Comparison</span>
+      </div>
+
+      <div class="results-grid">
+        <div class="result-card keep cost-card">
+          <h3>Keep Current Car</h3>
+          <div class="big-number" id="keep-cost-total"></div>
+          <span class="unit">total cost over period</span>
+          <ul id="keep-cost-breakdown"></ul>
+        </div>
+        <div class="result-card vs">
+          <span class="vs-label">VS</span>
+        </div>
+        <div class="result-card switch cost-card">
+          <h3>Switch to EV</h3>
+          <div class="big-number" id="switch-cost-total"></div>
+          <span class="unit">total cost over period</span>
+          <ul id="switch-cost-breakdown"></ul>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <h3>Cumulative Cost Over Time</h3>
+        <canvas id="cost-chart" width="800" height="400"></canvas>
+      </div>
+
+      <div id="cost-verdict-box" class="verdict"></div>
 
       <div class="btn-row">
         <button class="btn secondary" onclick="goToStep(1)">&larr; Start Over</button>

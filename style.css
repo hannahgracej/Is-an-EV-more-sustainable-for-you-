@@ -149,6 +149,36 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 .breakdown-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
 @media (max-width: 600px) { .breakdown-charts { grid-template-columns: 1fr; } }
 
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.5rem 0 2rem;
+}
+.section-divider::before,
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-divider span {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.cost-card .big-number { font-size: 2rem; }
+.result-card.cost-card li.li-total {
+  font-weight: 600;
+  border-top: 2px solid var(--border);
+  border-bottom: none;
+  padding-top: .5rem;
+  margin-top: .25rem;
+  color: var(--text);
+}
+
 .verdict {
   padding: 1.5rem;
   border-radius: 14px;
