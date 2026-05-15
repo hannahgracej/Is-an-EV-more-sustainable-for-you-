@@ -73,6 +73,12 @@
           <input id="gas-price" type="number" min="1" max="10" step="0.01" placeholder="e.g. 3.50" />
           <span class="hint">Leave blank for national average</span>
         </div>
+
+        <div class="field">
+          <label for="trade-in">Trade-in / Sale Value ($)</label>
+          <input id="trade-in" type="number" min="0" max="200000" step="100" placeholder="e.g. 8000" />
+          <span class="hint">What you'd get selling your current car</span>
+        </div>
       </div>
 
       <button class="btn primary" onclick="goToStep(2)">Next &rarr;</button>
@@ -141,6 +147,26 @@
           <label for="elec-price">Electricity Rate ($/kWh)</label>
           <input id="elec-price" type="number" min="0.01" max="1.00" step="0.01" placeholder="Auto from region" />
           <span class="hint">Leave blank for regional average</span>
+        </div>
+
+        <div class="field">
+          <label for="incentive-state">Your State</label>
+          <select id="incentive-state">
+            <option value="none">Select state&hellip;</option>
+          </select>
+          <span class="hint">For state-level EV incentive lookup</span>
+        </div>
+
+        <div class="field">
+          <label for="federal-credit">Federal Tax Credit ($)</label>
+          <input id="federal-credit" type="number" min="0" max="50000" step="100" value="7500" />
+          <span class="hint">$7,500 federal EV tax credit; set to 0 if ineligible</span>
+        </div>
+
+        <div class="field">
+          <label for="state-credit">State / Local Incentive ($)</label>
+          <input id="state-credit" type="number" min="0" max="50000" step="100" placeholder="Auto from state" />
+          <span class="hint">Auto-filled from state; edit for your specific rebate</span>
         </div>
       </div>
 

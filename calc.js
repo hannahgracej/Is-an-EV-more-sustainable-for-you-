@@ -71,7 +71,14 @@ function runComparison(inputs) {
   // --- LONG-TERM COST COMPARISON ---
   const gasPrice = inputs.gasPrice || FUEL_PRICE_PER_GALLON[curFuel] || 3.50;
   const elecPrice = inputs.elecPrice || ELECTRICITY_PRICE[gridMix] || 0.16;
-  const evPurchasePrice = inputs.evPrice || ev.msrp || 40000;
+  const evStickerPrice = inputs.evPrice || ev.msrp || 40000;
+
+  // Tax incentives and trade-in
+  const tradeInValue = inputs.tradeIn || 0;
+  const federalCredit = inputs.federalCredit != null ? inputs.federalCredit : FEDERAL_EV_CREDIT;
+  const stateCredit = inputs.stateCredit || 0;
+  const totalIncentives = federalCredit + stateCredit;
+  const evEffectivePrice = Math.max(0, evStickerPrice - tradeInValue - totalIncentives);
 
   // Keep: annual fuel cost
   const keepFuelCostPerYear = gallonsPerYear * gasPrice;
@@ -86,20 +93,20 @@ function runComparison(inputs) {
   const evAnnualRunning = evElecCostPerYear + evMaintenanceCostPerYear + evInsuranceCostPerYear;
 
   const keepTotalCost = keepAnnualCost * comparisonYears;
-  const switchTotalCost = evPurchasePrice + evAnnualRunning * comparisonYears;
+  const switchTotalCost = evEffectivePrice + evAnnualRunning * comparisonYears;
 
   const keepCostCumulative = [];
   const switchCostCumulative = [];
   for (let y = 1; y <= comparisonYears; y++) {
     keepCostCumulative.push(+(keepAnnualCost * y).toFixed(0));
-    switchCostCumulative.push(+(evPurchasePrice + evAnnualRunning * y).toFixed(0));
+    switchCostCumulative.push(+(evEffectivePrice + evAnnualRunning * y).toFixed(0));
   }
 
   // Cost breakeven: year when cumulative EV cost < cumulative keep cost
   let costBreakevenYear = null;
   const annualCostDiff = keepAnnualCost - evAnnualRunning;
   if (annualCostDiff > 0) {
-    costBreakevenYear = evPurchasePrice / annualCostDiff;
+    costBreakevenYear = evEffectivePrice / annualCostDiff;
     costBreakevenYear = Math.round(costBreakevenYear * 10) / 10;
   }
 
@@ -142,7 +149,12 @@ function runComparison(inputs) {
         cumulative: keepCostCumulative,
       },
       ev: {
-        purchasePrice: evPurchasePrice,
+        stickerPrice: evStickerPrice,
+        tradeInValue: tradeInValue,
+        federalCredit: federalCredit,
+        stateCredit: stateCredit,
+        totalIncentives: totalIncentives,
+        effectivePrice: +evEffectivePrice.toFixed(0),
         electricityPerYear: +evElecCostPerYear.toFixed(0),
         maintenancePerYear: evMaintenanceCostPerYear,
         insurancePerYear: evInsuranceCostPerYear,

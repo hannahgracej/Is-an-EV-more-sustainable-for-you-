@@ -41,6 +41,24 @@
     if (rate) document.getElementById("elec-price").placeholder = "$" + rate.toFixed(2) + "/kWh avg";
   });
 
+  // Populate state incentive dropdown
+  const stateSelect = document.getElementById("incentive-state");
+  Object.keys(STATE_EV_INCENTIVES).forEach(code => {
+    if (code === "none") return;
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = STATE_EV_INCENTIVES[code].label;
+    stateSelect.appendChild(opt);
+  });
+
+  // Auto-fill state credit when state changes
+  stateSelect.addEventListener("change", function () {
+    const info = STATE_EV_INCENTIVES[this.value];
+    if (info) {
+      document.getElementById("state-credit").value = info.credit;
+    }
+  });
+
   // Sync EV miles with current miles
   document.getElementById("cur-miles").addEventListener("input", function () {
     document.getElementById("ev-miles").value = this.value;
@@ -97,6 +115,9 @@ function gatherInputs() {
     gasPrice: parseFloat(document.getElementById("gas-price").value) || 0,
     evPrice: parseFloat(document.getElementById("ev-price").value) || 0,
     elecPrice: parseFloat(document.getElementById("elec-price").value) || 0,
+    tradeIn: parseFloat(document.getElementById("trade-in").value) || 0,
+    federalCredit: parseFloat(document.getElementById("federal-credit").value) || 0,
+    stateCredit: parseFloat(document.getElementById("state-credit").value) || 0,
   };
 }
 
@@ -186,13 +207,26 @@ function renderResults(r, inputs) {
   `;
 
   const switchCostUl = document.getElementById("switch-cost-breakdown");
-  switchCostUl.innerHTML = `
-    <li>Purchase price <span>${fmt(c.ev.purchasePrice)}</span></li>
+  let switchCostHtml = `<li>Sticker price <span>${fmt(c.ev.stickerPrice)}</span></li>`;
+  if (c.ev.tradeInValue > 0) {
+    switchCostHtml += `<li class="li-credit">Trade-in value <span>&minus;${fmt(c.ev.tradeInValue)}</span></li>`;
+  }
+  if (c.ev.federalCredit > 0) {
+    switchCostHtml += `<li class="li-credit">Federal tax credit <span>&minus;${fmt(c.ev.federalCredit)}</span></li>`;
+  }
+  if (c.ev.stateCredit > 0) {
+    switchCostHtml += `<li class="li-credit">State / local incentive <span>&minus;${fmt(c.ev.stateCredit)}</span></li>`;
+  }
+  if (c.ev.tradeInValue > 0 || c.ev.totalIncentives > 0) {
+    switchCostHtml += `<li class="li-total">Effective price <span>${fmt(c.ev.effectivePrice)}</span></li>`;
+  }
+  switchCostHtml += `
     <li>Electricity (${c.elecPrice.toFixed(2)}/kWh) <span>${fmt(c.ev.electricityPerYear)}/yr</span></li>
     <li>Maintenance <span>${fmt(c.ev.maintenancePerYear)}/yr</span></li>
     <li>Insurance <span>${fmt(c.ev.insurancePerYear)}/yr</span></li>
     <li class="li-total">Annual running <span>${fmt(c.ev.annualRunning)}/yr</span></li>
   `;
+  switchCostUl.innerHTML = switchCostHtml;
 
   // Cost verdict
   const costVerdict = document.getElementById("cost-verdict-box");
