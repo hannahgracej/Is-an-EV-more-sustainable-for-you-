@@ -103,6 +103,7 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 .btn.primary:hover { background: #0f766e; transform: translateY(-1px); }
 .btn.secondary { background: var(--border); color: var(--text); }
 .btn.secondary:hover { background: #cbd5e1; }
+.btn:disabled { opacity: .65; cursor: progress; transform: none; }
 
 .btn-row { display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end; }
 .step > .btn { margin-top: 2rem; float: right; }
@@ -197,6 +198,47 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 .verdict.worse  { background: var(--red-bg); border-left: 4px solid var(--red); }
 .verdict.neutral { background: var(--blue-light); border-left: 4px solid var(--blue); }
 .verdict strong { font-weight: 700; }
+
+.share-box {
+  background: var(--accent-light);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  margin-top: 1.5rem;
+}
+.share-box strong { display: block; margin-bottom: .25rem; }
+.share-box p { color: var(--muted); font-size: .9rem; margin-bottom: .75rem; }
+.share-row { display: flex; gap: .5rem; }
+.share-row input {
+  flex: 1;
+  min-width: 0;
+  padding: .65rem .85rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: .85rem;
+  color: var(--text);
+  background: #fff;
+}
+.calc-source { margin-top: 1rem; color: var(--orange); font-size: .9rem; }
+
+.history { margin-top: 2rem; clear: both; }
+.history h3 { font-size: 1rem; margin-bottom: .25rem; }
+.history ul { list-style: none; }
+.history li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .7rem 0;
+  border-top: 1px solid var(--border);
+  font-size: .92rem;
+}
+.history a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.history li span { color: var(--muted); text-align: right; }
+@media (max-width: 600px) {
+  .history li { flex-direction: column; gap: .15rem; }
+  .history li span { text-align: left; }
+  .share-row { flex-direction: column; }
+}
 
 footer {
   text-align: center; padding: 2rem 1.5rem; color: #94a3b8; font-size: .8rem; max-width: 700px; margin: 0 auto;

@@ -1,4 +1,18 @@
 /*
+  Shared by the browser (global EV_DATA from data.js) and the Lambda (require).
+  Keep the two call sites in sync: the API is authoritative for saved results,
+  and the page uses this same function only when the API cannot be reached.
+
+  The catalog names are read inside the function. A top-level const with the
+  same name as data.js would be a duplicate declaration in the browser, where
+  classic scripts share one global scope.
+*/
+function engineData() {
+  if (typeof module !== "undefined" && module.exports) return require("./data.js");
+  return globalThis.EV_DATA;
+}
+
+/*
   Carbon comparison calculation engine.
 
   Key principles:
@@ -11,6 +25,20 @@
 */
 
 function runComparison(inputs) {
+  const {
+    EV_MODELS,
+    FUEL_CO2_PER_GALLON,
+    UPSTREAM_FACTOR,
+    estimateMPG,
+    GRID_INTENSITY,
+    MAINTENANCE_CO2,
+    FUEL_PRICE_PER_GALLON,
+    ELECTRICITY_PRICE,
+    MAINTENANCE_COST,
+    INSURANCE_COST,
+    FEDERAL_EV_CREDIT,
+  } = engineData();
+
   const {
     curFuel, curYear, curSize, curMPG, curMilesPerYear, curAgeOwned,
     evModel, evMilesPerYear, evYears, gridMix,
@@ -169,4 +197,8 @@ function runComparison(inputs) {
       elecPrice,
     },
   };
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { runComparison };
 }

@@ -82,6 +82,11 @@
       </div>
 
       <button class="btn primary" onclick="goToStep(2)">Next &rarr;</button>
+
+      <div id="history" class="history" hidden>
+        <h3>Your recent comparisons</h3>
+        <ul id="history-list"></ul>
+      </div>
     </section>
 
     <!-- Step 2: New EV -->
@@ -172,7 +177,7 @@
 
       <div class="btn-row">
         <button class="btn secondary" onclick="goToStep(1)">&larr; Back</button>
-        <button class="btn primary" onclick="runAnalysis()">Analyze</button>
+        <button class="btn primary" id="analyze-btn" onclick="runAnalysis()">Analyze</button>
       </div>
     </section>
 
@@ -250,6 +255,16 @@
 
       <div id="cost-verdict-box" class="verdict"></div>
 
+      <div id="share-box" class="share-box" hidden>
+        <strong>Saved.</strong>
+        <p id="share-note">Anyone with this link can open this comparison. It is stored for a year.</p>
+        <div class="share-row">
+          <input id="share-url" type="text" readonly aria-label="Share link" />
+          <button class="btn secondary" type="button" id="share-copy">Copy link</button>
+        </div>
+      </div>
+      <p id="calc-source" class="calc-source" hidden></p>
+
       <div class="btn-row">
         <button class="btn secondary" onclick="goToStep(1)">&larr; Start Over</button>
       </div>
@@ -260,6 +275,7 @@
     <p>Data sourced from EPA, GREET model (Argonne National Lab), IEA, and peer-reviewed LCA studies. Estimates are illustrative and may vary based on real-world conditions.</p>
   </footer>
 
+  <script src="config.js"></script>
   <script src="data.js"></script>
   <script src="calc.js"></script>
   <script src="chart.js"></script>

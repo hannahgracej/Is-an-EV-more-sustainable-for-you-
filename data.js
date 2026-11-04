@@ -1,7 +1,13 @@
 /*
   Vehicle and emissions reference data.
   Sources: EPA fuel economy data, Argonne GREET model, IEA, peer-reviewed LCA studies.
+
+  This file is the catalog for both the browser page and the Lambda API.
+  FACTORS_VERSION is stored with every saved analysis so an old result can be
+  tied back to the factors that produced it.
 */
+
+const FACTORS_VERSION = "2026.1";
 
 const EV_MODELS = [
   { name: "Tesla Model 3 Standard Range Plus", battery: 60, range: 272, mfgCO2: 8.1, msrp: 38990 },
@@ -204,3 +210,23 @@ const STATE_EV_INCENTIVES = {
   "WY":    { label: "Wyoming", credit: 0 },
   "DC":    { label: "Washington D.C.", credit: 4000 },
 };
+
+const EV_DATA = {
+  FACTORS_VERSION,
+  EV_MODELS,
+  FUEL_CO2_PER_GALLON,
+  UPSTREAM_FACTOR,
+  ICE_MFG_CO2,
+  estimateMPG,
+  GRID_INTENSITY,
+  MAINTENANCE_CO2,
+  FUEL_PRICE_PER_GALLON,
+  ELECTRICITY_PRICE,
+  MAINTENANCE_COST,
+  INSURANCE_COST,
+  FEDERAL_EV_CREDIT,
+  STATE_EV_INCENTIVES,
+};
+
+if (typeof globalThis !== "undefined") globalThis.EV_DATA = EV_DATA;
+if (typeof module !== "undefined" && module.exports) module.exports = EV_DATA;
