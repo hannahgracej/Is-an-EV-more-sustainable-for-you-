@@ -138,4 +138,15 @@ function referenceCatalog() {
   };
 }
 
-module.exports = { HttpError, validateInputs, referenceCatalog };
+function validateSuggestionInputs(body) {
+  const inputs = validateInputs(Object.assign({}, body, {
+    evModel: EV_MODELS[0].name,
+    visitorId: "suggestion0",
+    evPrice: 0,
+  }));
+  delete inputs.evModel;
+  delete inputs.visitorId;
+  return inputs;
+}
+
+module.exports = { HttpError, validateInputs, validateSuggestionInputs, referenceCatalog };

@@ -20,6 +20,10 @@
 
   // Populate EV model dropdown
   const evSelect = document.getElementById("ev-model");
+  const suggestOpt = document.createElement("option");
+  suggestOpt.value = "suggest";
+  suggestOpt.textContent = "I'm not sure \u2014 suggest one for me";
+  evSelect.appendChild(suggestOpt);
   EV_MODELS.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.name;
@@ -29,10 +33,23 @@
 
   // Auto-fill EV specs when model changes
   evSelect.addEventListener("change", function () {
+    if (this.value === "suggest") {
+      document.getElementById("ev-range").value = "";
+      document.getElementById("ev-battery").value = "";
+      document.getElementById("ev-price").value = "";
+      scheduleSuggestions();
+      return;
+    }
+    hideSuggestions();
     const ev = EV_MODELS.find(m => m.name === this.value);
     document.getElementById("ev-range").value = ev ? ev.range : "";
     document.getElementById("ev-battery").value = ev ? ev.battery : "";
     document.getElementById("ev-price").value = ev ? ev.msrp : "";
+  });
+
+  ["grid-mix", "ev-miles", "ev-years", "elec-price", "federal-credit", "state-credit", "incentive-state"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", scheduleSuggestions);
+    document.getElementById(id).addEventListener("input", scheduleSuggestions);
   });
 
   // Auto-fill electricity rate when grid region changes
@@ -93,6 +110,10 @@ function validateStep2() {
   const grid = document.getElementById("grid-mix").value;
   const miles = document.getElementById("ev-miles").value;
   const years = document.getElementById("ev-years").value;
+  if (model === "suggest") {
+    alert("Pick one of the three suggested models, or choose a model yourself.");
+    return false;
+  }
   if (!model || !grid || !miles || !years) {
     alert("Please fill in all required fields for the EV.");
     return false;
@@ -119,6 +140,97 @@ function gatherInputs() {
     federalCredit: parseFloat(document.getElementById("federal-credit").value) || 0,
     stateCredit: parseFloat(document.getElementById("state-credit").value) || 0,
   };
+}
+
+const SUGGEST = "suggest";
+let suggestTimer = null;
+
+function hideSuggestions() {
+  const panel = document.getElementById("suggestions");
+  if (panel) panel.hidden = true;
+}
+
+function scheduleSuggestions() {
+  if (document.getElementById("ev-model").value !== SUGGEST) return;
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(loadSuggestions, 200);
+}
+
+function money(amount) {
+  const sign = amount < 0 ? "\u2212" : "";
+  return sign + "$" + Math.abs(amount).toLocaleString();
+}
+
+function renderSuggestions(suggestions) {
+  const panel = document.getElementById("suggestions");
+  const cards = document.getElementById("suggestion-cards");
+  const status = document.getElementById("suggestions-status");
+  status.textContent = "Ranked for your car, mileage, grid, and incentives. Each price uses that model\u2019s MSRP.";
+  cards.innerHTML = suggestions.map((item) => {
+    const costLine = item.costSavings >= 0
+      ? "Saves " + money(item.costSavings) + " vs keeping your car"
+      : "Costs " + money(Math.abs(item.costSavings)) + " more than keeping your car";
+    return "<button type=\"button\" class=\"suggestion-card\" data-model=\"" + escapeHtml(item.name) + "\">" +
+      "<span class=\"suggestion-label\">" + escapeHtml(item.label) + "</span>" +
+      "<strong>" + escapeHtml(item.name) + "</strong>" +
+      "<span>" + escapeHtml(item.detail) + "</span>" +
+      "<span>" + item.range + " mi \u00b7 " + item.battery + " kWh \u00b7 " + money(item.msrp) + "</span>" +
+      "<span>Saves " + item.carbonSavings.toFixed(1) + " t CO\u2082 \u00b7 " + costLine + "</span>" +
+      "<span class=\"suggestion-use\">Use this model</span>" +
+      "</button>";
+  }).join("");
+  cards.querySelectorAll(".suggestion-card").forEach((button) => {
+    button.addEventListener("click", () => chooseSuggestion(button.getAttribute("data-model")));
+  });
+  panel.hidden = false;
+}
+
+function chooseSuggestion(name) {
+  const select = document.getElementById("ev-model");
+  select.value = name;
+  select.dispatchEvent(new Event("change"));
+}
+
+async function loadSuggestions() {
+  if (document.getElementById("ev-model").value !== SUGGEST) return;
+  const panel = document.getElementById("suggestions");
+  const status = document.getElementById("suggestions-status");
+  const cards = document.getElementById("suggestion-cards");
+  const grid = document.getElementById("grid-mix").value;
+  const miles = document.getElementById("ev-miles").value;
+  const years = document.getElementById("ev-years").value;
+  panel.hidden = false;
+  cards.innerHTML = "";
+  if (!grid || !miles || !years) {
+    status.textContent = "Choose your electricity grid, yearly miles, and how long you would keep the EV.";
+    return;
+  }
+
+  status.textContent = "Comparing the catalog\u2026";
+  const inputs = gatherInputs();
+  inputs.evPrice = 0;
+  delete inputs.evModel;
+  try {
+    const response = await fetch(apiUrl("/suggestions"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(inputs),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 400) {
+      status.textContent = payload.error || "Those details could not be compared.";
+      return;
+    }
+    if (!response.ok || !payload.suggestions) throw new Error("offline");
+    renderSuggestions(payload.suggestions);
+  } catch (_) {
+    try {
+      renderSuggestions(suggestModels(inputs));
+      status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP.";
+    } catch (err) {
+      status.textContent = err.message || "The suggestions could not be calculated.";
+    }
+  }
 }
 
 let lastResult = null;

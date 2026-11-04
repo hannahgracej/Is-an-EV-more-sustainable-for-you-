@@ -34,6 +34,7 @@ function isApi(urlPath) {
   return urlPath === "/health"
     || urlPath === "/reference"
     || urlPath === "/analyses"
+    || urlPath === "/suggestions"
     || urlPath.startsWith("/analyses/")
     || urlPath === "/api"
     || urlPath.startsWith("/api/");

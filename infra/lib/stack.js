@@ -70,6 +70,7 @@ class EvCompareStack extends cdk.Stack {
       { path: "/health", methods: [apigwv2.HttpMethod.GET] },
       { path: "/reference", methods: [apigwv2.HttpMethod.GET] },
       { path: "/analyses", methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST] },
+      { path: "/suggestions", methods: [apigwv2.HttpMethod.POST] },
       { path: "/analyses/{id}", methods: [apigwv2.HttpMethod.GET] },
       { path: "/{proxy+}", methods: [apigwv2.HttpMethod.OPTIONS] },
     ];

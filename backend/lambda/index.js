@@ -7,15 +7,16 @@
     POST /analyses
     GET  /analyses?visitorId=
     GET  /analyses/{id}
+    POST /suggestions
 
   The AWS SDK is required only when TABLE_NAME is set. The Node.js 22 Lambda
   runtime provides it, so the deployment zip does not vendor node_modules.
 */
 
 const { randomUUID } = require("crypto");
-const { runComparison } = require("../../calc.js");
+const { runComparison, suggestModels } = require("../../calc.js");
 const { FACTORS_VERSION } = require("../../data.js");
-const { HttpError, validateInputs, referenceCatalog } = require("./validate.js");
+const { HttpError, validateInputs, validateSuggestionInputs, referenceCatalog } = require("./validate.js");
 const store = require("./store.js");
 
 const MAX_BODY_BYTES = 10_000;
@@ -77,6 +78,17 @@ function publicAnalysis(item) {
     result: item.result,
     summary: item.summary,
   };
+}
+
+async function createSuggestions(event) {
+  const inputs = validateSuggestionInputs(parseBody(event));
+  const suggestions = suggestModels(inputs);
+  console.log(JSON.stringify({
+    level: "info",
+    route: "POST /suggestions",
+    models: suggestions.map((item) => item.name),
+  }));
+  return json(200, { suggestions });
 }
 
 async function createAnalysis(event) {
@@ -149,6 +161,7 @@ async function handler(event) {
       return json(200, referenceCatalog());
     }
     if (method === "POST" && path === "/analyses") return await createAnalysis(event);
+    if (method === "POST" && path === "/suggestions") return await createSuggestions(event);
     if (method === "GET" && path === "/analyses") return await listAnalyses(event);
 
     const match = path.match(/^\/analyses\/([0-9a-f-]{36})$/i);

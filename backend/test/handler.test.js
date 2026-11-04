@@ -110,6 +110,30 @@ test("unknown ids return 404 and the catalog is served", async () => {
   assert.equal(catalog.factorsVersion, "2026.1");
 });
 
+test("suggestions are three different models for carbon, cost, and both", async () => {
+  const { evModel, visitorId, ...base } = inputs;
+  const response = await handler(event({ method: "POST", path: "/suggestions", body: base }));
+  assert.equal(response.statusCode, 200);
+  const suggestions = JSON.parse(response.body).suggestions;
+  assert.equal(suggestions.length, 3);
+  assert.equal(new Set(suggestions.map((item) => item.name)).size, 3);
+  assert.equal(suggestions[0].category, "carbon");
+  assert.equal(suggestions[0].name, "Nissan Leaf S");
+  assert.equal(suggestions[1].category, "cost");
+  assert.equal(suggestions[1].name, "Chevrolet Bolt EV");
+  assert.equal(suggestions[2].category, "balance");
+  assert.ok(suggestions[0].carbonSavings >= suggestions[1].carbonSavings);
+  assert.ok(suggestions[1].costSavings > suggestions[0].costSavings);
+  assert.ok(suggestions[2].costSavings > 0);
+
+  const rejected = await handler(event({
+    method: "POST",
+    path: "/analyses",
+    body: { ...inputs, evModel: "suggest" },
+  }));
+  assert.equal(rejected.statusCode, 400);
+});
+
 test("health check reports the factors version", async () => {
   const response = await handler(event({ method: "GET", path: "/health" }));
   assert.equal(response.statusCode, 200);
