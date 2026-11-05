@@ -5,7 +5,7 @@ A web-based tool that helps you compare the lifetime carbon footprint of **keepi
 ## How It Works
 
 1. **Enter your current car details** — fuel type, model year, vehicle size, fuel economy (MPG), and annual mileage.
-2. **Pick the EV you're considering** — choose from 40+ popular models, or ask for three suggestions: the biggest carbon cut, the biggest cost savings, and the next car that does well on both.
+2. **Pick the EV you're considering** — choose from 40+ popular models, or press **Suggest one for me** after entering miles, grid, and state. That shows the biggest carbon cut, the biggest cost savings, and the next car that does well on both.
 3. **Select your electricity grid** — carbon intensity varies significantly by region.
 4. **Get your results** — see a side-by-side comparison with cumulative emissions charts and a clear verdict.
 5. **Keep the result** — it is stored and you get a link back to it. Recent comparisons for this browser are listed on the first step.
