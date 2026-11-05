@@ -2,13 +2,31 @@
 
 A web-based tool that helps you compare the lifetime carbon footprint of **keeping your current gas/diesel/hybrid car** versus **switching to an electric vehicle**.
 
+## Open the site
+
+The public site is already published. Open it in a browser:
+
+**https://hannahgracej.github.io/Is-an-EV-more-sustainable-for-you-/**
+
+The calculator and **Suggest one for me** both work on that page. The math runs in your browser there, and comparisons are not saved on a server. If the page looks like an older version, refresh it.
+
+To save a comparison and get a link back to it, run the page and the API on your computer. From this folder, with Node.js 22:
+
+```bash
+npm start
+```
+
+Then open **http://localhost:3001**. Saved comparisons stay in memory until you stop that process.
+
+After you deploy to AWS, the deploy command prints `SiteUrl`. Open that address. It serves the page and the API, and saved comparisons are kept for a year. The steps are in [Deploying to your AWS account](#deploying-to-your-aws-account).
+
 ## How It Works
 
 1. **Enter your current car details** — fuel type, model year, vehicle size, fuel economy (MPG), and annual mileage.
 2. **Pick the EV you're considering** — choose from 40+ popular models, or press **Suggest one for me** after entering miles, grid, and state. That shows the biggest carbon cut, the biggest cost savings, and the next car that does well on both.
 3. **Select your electricity grid** — carbon intensity varies significantly by region.
 4. **Get your results** — see a side-by-side comparison with cumulative emissions charts and a clear verdict.
-5. **Keep the result** — it is stored and you get a link back to it. Recent comparisons for this browser are listed on the first step.
+5. **Keep the result** — on the local server or the AWS site, you get a link back to the comparison, and recent ones for this browser are listed on the first step. On the public GitHub Pages address, the result is shown in the browser and is not stored.
 
 ## What's Included in the Calculation
 
@@ -54,13 +72,7 @@ Every saved row stores `factorsVersion` (`2026.1` today). When the emissions fac
 
 ## Running locally
 
-Node.js 22. No install step.
-
-```bash
-npm start
-```
-
-Open http://localhost:3001. The same process serves the page and the API. Saved comparisons stay in memory until you stop it.
+`npm start` is described in [Open the site](#open-the-site). It serves the page and the API on http://localhost:3001.
 
 ```bash
 npm test
@@ -119,14 +131,6 @@ The useful version is specific. A few claims this repo can back up:
 - The pipeline uses OIDC. There is no long-lived AWS key in GitHub.
 
 Reasonable next steps, if an interviewer asks what you would add: Cognito in front of the visitor id, a tighter CORS allow-list if the API is ever called from another origin, and point-in-time recovery on the table if the data became something you could not lose. None of those are built, and they do not need to be for the design to be coherent.
-
-## Running the static page on its own
-
-GitHub Pages still publishes the HTML. Without this stack behind it, Analyze falls back to the in-browser calculation and does not save anything.
-
-```bash
-python3 -m http.server 8000
-```
 
 ## File Structure
 
