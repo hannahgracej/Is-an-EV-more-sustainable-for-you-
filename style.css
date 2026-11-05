@@ -105,6 +105,17 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 .btn.secondary:hover { background: #cbd5e1; }
 .btn:disabled { opacity: .65; cursor: progress; transform: none; }
 
+.model-field { grid-column: 1 / -1; }
+.model-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: end;
+}
+.suggest-btn { justify-content: center; width: 100%; }
+@media (max-width: 600px) { .model-picker { grid-template-columns: 1fr; } }
+
+.suggestions { margin-top: 1.25rem; clear: both; }
 .suggest-action {
   grid-column: 1 / -1;
   display: flex;

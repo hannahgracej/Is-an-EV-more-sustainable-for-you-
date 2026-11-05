@@ -96,6 +96,36 @@
       <p class="step-desc">Start with how much you drive and where. Then pick a model, or ask for three suggestions.</p>
 
       <div class="form-grid">
+        <div class="model-field">
+          <div class="model-picker">
+            <div class="field">
+              <label for="ev-model">EV Model</label>
+              <select id="ev-model">
+                <option value="">Select&hellip;</option>
+              </select>
+            </div>
+            <button type="button" class="btn secondary suggest-btn" id="suggest-btn" aria-controls="suggestions" aria-expanded="false">Suggest one for me</button>
+          </div>
+
+          <div id="suggestions" class="suggestions" hidden>
+            <h3>Three models for your situation</h3>
+            <p id="suggestions-status" class="hint" aria-live="polite"></p>
+            <div id="suggestion-cards" class="suggestion-cards"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="ev-range">EPA Range (miles)</label>
+          <input id="ev-range" type="number" min="50" max="600" placeholder="Auto-filled" readonly />
+          <span class="hint">Auto-filled from selected model</span>
+        </div>
+
+        <div class="field">
+          <label for="ev-battery">Battery Size (kWh)</label>
+          <input id="ev-battery" type="number" min="20" max="250" placeholder="Auto-filled" readonly />
+          <span class="hint">Auto-filled from selected model</span>
+        </div>
+
         <div class="field">
           <label for="ev-miles">Miles You'd Drive per Year</label>
           <input id="ev-miles" type="number" min="500" max="100000" placeholder="e.g. 12000" value="12000" />
