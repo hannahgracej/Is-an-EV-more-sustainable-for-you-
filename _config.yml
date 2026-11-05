@@ -1,0 +1,9 @@
+# GitHub Pages publishes the calculator page only.
+# The API and the CDK app stay in the repository and are not part of this site.
+exclude:
+  - backend
+  - infra
+  - node_modules
+  - package.json
+  - package-lock.json
+  - README.md

@@ -20,6 +20,10 @@
 
   // Populate EV model dropdown
   const evSelect = document.getElementById("ev-model");
+  const suggestOpt = document.createElement("option");
+  suggestOpt.value = "suggest";
+  suggestOpt.textContent = "I'm not sure \u2014 suggest one for me";
+  evSelect.appendChild(suggestOpt);
   EV_MODELS.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.name;
@@ -29,10 +33,23 @@
 
   // Auto-fill EV specs when model changes
   evSelect.addEventListener("change", function () {
+    if (this.value === "suggest") {
+      document.getElementById("ev-range").value = "";
+      document.getElementById("ev-battery").value = "";
+      document.getElementById("ev-price").value = "";
+      scheduleSuggestions();
+      return;
+    }
+    hideSuggestions();
     const ev = EV_MODELS.find(m => m.name === this.value);
     document.getElementById("ev-range").value = ev ? ev.range : "";
     document.getElementById("ev-battery").value = ev ? ev.battery : "";
     document.getElementById("ev-price").value = ev ? ev.msrp : "";
+  });
+
+  ["grid-mix", "ev-miles", "ev-years", "elec-price", "federal-credit", "state-credit", "incentive-state"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", scheduleSuggestions);
+    document.getElementById(id).addEventListener("input", scheduleSuggestions);
   });
 
   // Auto-fill electricity rate when grid region changes
@@ -93,6 +110,10 @@ function validateStep2() {
   const grid = document.getElementById("grid-mix").value;
   const miles = document.getElementById("ev-miles").value;
   const years = document.getElementById("ev-years").value;
+  if (model === "suggest") {
+    alert("Pick one of the three suggested models, or choose a model yourself.");
+    return false;
+  }
   if (!model || !grid || !miles || !years) {
     alert("Please fill in all required fields for the EV.");
     return false;
@@ -121,20 +142,273 @@ function gatherInputs() {
   };
 }
 
-function runAnalysis() {
-  if (!validateStep2()) return;
+const SUGGEST = "suggest";
+let suggestTimer = null;
 
-  const inputs = gatherInputs();
-  let result;
-  try {
-    result = runComparison(inputs);
-  } catch (e) {
-    alert("Error: " + e.message);
+function hideSuggestions() {
+  const panel = document.getElementById("suggestions");
+  if (panel) panel.hidden = true;
+}
+
+function scheduleSuggestions() {
+  if (document.getElementById("ev-model").value !== SUGGEST) return;
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(loadSuggestions, 200);
+}
+
+function money(amount) {
+  const sign = amount < 0 ? "\u2212" : "";
+  return sign + "$" + Math.abs(amount).toLocaleString();
+}
+
+function renderSuggestions(suggestions) {
+  const panel = document.getElementById("suggestions");
+  const cards = document.getElementById("suggestion-cards");
+  const status = document.getElementById("suggestions-status");
+  status.textContent = "Ranked for your car, mileage, grid, and incentives. Each price uses that model\u2019s MSRP.";
+  cards.innerHTML = suggestions.map((item) => {
+    const costLine = item.costSavings >= 0
+      ? "Saves " + money(item.costSavings) + " vs keeping your car"
+      : "Costs " + money(Math.abs(item.costSavings)) + " more than keeping your car";
+    return "<button type=\"button\" class=\"suggestion-card\" data-model=\"" + escapeHtml(item.name) + "\">" +
+      "<span class=\"suggestion-label\">" + escapeHtml(item.label) + "</span>" +
+      "<strong>" + escapeHtml(item.name) + "</strong>" +
+      "<span>" + escapeHtml(item.detail) + "</span>" +
+      "<span>" + item.range + " mi \u00b7 " + item.battery + " kWh \u00b7 " + money(item.msrp) + "</span>" +
+      "<span>Saves " + item.carbonSavings.toFixed(1) + " t CO\u2082 \u00b7 " + costLine + "</span>" +
+      "<span class=\"suggestion-use\">Use this model</span>" +
+      "</button>";
+  }).join("");
+  cards.querySelectorAll(".suggestion-card").forEach((button) => {
+    button.addEventListener("click", () => chooseSuggestion(button.getAttribute("data-model")));
+  });
+  panel.hidden = false;
+}
+
+function chooseSuggestion(name) {
+  const select = document.getElementById("ev-model");
+  select.value = name;
+  select.dispatchEvent(new Event("change"));
+}
+
+async function loadSuggestions() {
+  if (document.getElementById("ev-model").value !== SUGGEST) return;
+  const panel = document.getElementById("suggestions");
+  const status = document.getElementById("suggestions-status");
+  const cards = document.getElementById("suggestion-cards");
+  const grid = document.getElementById("grid-mix").value;
+  const miles = document.getElementById("ev-miles").value;
+  const years = document.getElementById("ev-years").value;
+  panel.hidden = false;
+  cards.innerHTML = "";
+  if (!grid || !miles || !years) {
+    status.textContent = "Choose your electricity grid, yearly miles, and how long you would keep the EV.";
     return;
   }
 
+  status.textContent = "Comparing the catalog\u2026";
+  const inputs = gatherInputs();
+  inputs.evPrice = 0;
+  delete inputs.evModel;
+  try {
+    const response = await fetch(apiUrl("/suggestions"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(inputs),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 400) {
+      status.textContent = payload.error || "Those details could not be compared.";
+      return;
+    }
+    if (!response.ok || !payload.suggestions) throw new Error("offline");
+    renderSuggestions(payload.suggestions);
+  } catch (_) {
+    try {
+      renderSuggestions(suggestModels(inputs));
+      status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP.";
+    } catch (err) {
+      status.textContent = err.message || "The suggestions could not be calculated.";
+    }
+  }
+}
+
+let lastResult = null;
+
+function visitorId() {
+  const key = "ev-visitor-id";
+  const fresh = () => (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : ("v-" + Math.random().toString(16).slice(2) + Date.now().toString(16));
+  try {
+    const existing = localStorage.getItem(key);
+    if (existing) return existing;
+    const id = fresh();
+    localStorage.setItem(key, id);
+    return id;
+  } catch (_) {
+    if (!window.__evVisitor) window.__evVisitor = fresh();
+    return window.__evVisitor;
+  }
+}
+
+function apiUrl(path) {
+  const base = (window.EV_CONFIG && window.EV_CONFIG.apiBase) || "";
+  return base + path;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+
+async function postAnalysis(inputs) {
+  let response;
+  try {
+    response = await fetch(apiUrl("/analyses"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(Object.assign({ visitorId: visitorId() }, inputs)),
+    });
+  } catch (_) {
+    const offline = new Error("The API is unreachable.");
+    offline.offline = true;
+    throw offline;
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (response.status === 400) {
+    const detail = payload.fields ? " Check: " + Object.keys(payload.fields).join(", ") + "." : "";
+    throw new Error((payload.error || "The analysis was rejected.") + detail);
+  }
+  if (!response.ok || !payload.result) {
+    const offline = new Error(payload.error || "The API is unreachable.");
+    offline.offline = true;
+    throw offline;
+  }
+  return payload;
+}
+
+function showShare(id) {
+  const box = document.getElementById("share-box");
+  const source = document.getElementById("calc-source");
+  if (!id) {
+    box.hidden = true;
+    source.hidden = false;
+    source.textContent = "Calculated in this browser because the API was unreachable. This comparison was not saved.";
+    return;
+  }
+  source.hidden = true;
+  box.hidden = false;
+  const url = new URL(location.href);
+  url.searchParams.set("id", id);
+  document.getElementById("share-url").value = url.toString();
+}
+
+function applyInputs(inputs) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? "" : value;
+  };
+  set("cur-fuel", inputs.curFuel);
+  set("cur-year", inputs.curYear);
+  set("cur-size", inputs.curSize);
+  set("cur-mpg", inputs.curMPG || "");
+  set("cur-miles", inputs.curMilesPerYear);
+  set("cur-age", inputs.curAgeOwned);
+  set("gas-price", inputs.gasPrice || "");
+  set("trade-in", inputs.tradeIn || "");
+  set("ev-model", inputs.evModel);
+  set("ev-miles", inputs.evMilesPerYear);
+  set("ev-years", inputs.evYears);
+  set("grid-mix", inputs.gridMix);
+  set("ev-price", inputs.evPrice || "");
+  set("elec-price", inputs.elecPrice || "");
+  set("federal-credit", inputs.federalCredit);
+  set("state-credit", inputs.stateCredit || "");
+  const ev = EV_MODELS.find(m => m.name === inputs.evModel);
+  if (ev) {
+    set("ev-range", ev.range);
+    set("ev-battery", ev.battery);
+    if (!inputs.evPrice) set("ev-price", ev.msrp);
+  }
+}
+
+function present(result, inputs, id) {
+  lastResult = result;
   renderResults(result, inputs);
+  showShare(id);
+  const url = new URL(location.href);
+  if (id) url.searchParams.set("id", id);
+  else url.searchParams.delete("id");
+  history.replaceState(null, "", url);
   goToStep(3);
+}
+
+async function loadHistory() {
+  const wrap = document.getElementById("history");
+  const list = document.getElementById("history-list");
+  try {
+    const response = await fetch(apiUrl("/analyses?visitorId=" + encodeURIComponent(visitorId())));
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data.analyses || !data.analyses.length) {
+      wrap.hidden = true;
+      return;
+    }
+    list.innerHTML = data.analyses.map((item) => {
+      const when = new Date(item.createdAt).toLocaleDateString(undefined, {
+        month: "short", day: "numeric", year: "numeric",
+      });
+      const carbon = item.carbonSavings > 0
+        ? "EV saves " + item.carbonSavings.toFixed(1) + " t CO\u2082"
+        : "Current car saves " + Math.abs(item.carbonSavings).toFixed(1) + " t CO\u2082";
+      const href = new URL(location.href);
+      href.searchParams.set("id", item.id);
+      return "<li><a href=\"" + href.pathname + href.search + "\">" + escapeHtml(item.evModel) +
+        "</a><span>" + escapeHtml(when + " · " + carbon) + "</span></li>";
+    }).join("");
+    wrap.hidden = false;
+  } catch (_) {
+    wrap.hidden = true;
+  }
+}
+
+async function loadShared(id) {
+  try {
+    const response = await fetch(apiUrl("/analyses/" + encodeURIComponent(id)));
+    if (!response.ok) return;
+    const saved = await response.json();
+    applyInputs(saved.inputs);
+    present(saved.result, saved.inputs, saved.id);
+  } catch (_) {}
+}
+
+async function runAnalysis() {
+  if (!validateStep2()) return;
+
+  const inputs = gatherInputs();
+  const button = document.getElementById("analyze-btn");
+  button.disabled = true;
+  button.textContent = "Analyzing\u2026";
+  try {
+    const saved = await postAnalysis(inputs);
+    present(saved.result, saved.inputs, saved.id);
+    loadHistory();
+  } catch (e) {
+    if (!e.offline) {
+      alert(e.message);
+      return;
+    }
+    try {
+      present(runComparison(inputs), inputs, null);
+    } catch (calcError) {
+      alert("Error: " + calcError.message);
+    }
+  } finally {
+    button.disabled = false;
+    button.textContent = "Analyze";
+  }
 }
 
 function renderResults(r, inputs) {
@@ -257,22 +531,34 @@ window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
     const resultsVisible = document.getElementById("results").classList.contains("active-step");
-    if (resultsVisible) {
-      const inputs = gatherInputs();
-      try {
-        const result = runComparison(inputs);
-        drawLineChart("emissions-chart", result);
-        drawCostChart("cost-chart", result);
-        drawDoughnut("breakdown-keep", [
-          { label: "Fuel", value: result.keep.fuel, color: COLORS.fuel },
-          { label: "Maintenance", value: result.keep.maintenance, color: COLORS.maint },
-        ], result.keep.total);
-        drawDoughnut("breakdown-switch", [
-          { label: "Manufacturing", value: result.ev.manufacturing, color: COLORS.mfg },
-          { label: "Electricity", value: result.ev.driving, color: COLORS.driving },
-          { label: "Maintenance", value: result.ev.maintenance, color: COLORS.maint },
-        ], result.ev.total);
-      } catch (_) {}
+    if (resultsVisible && lastResult) {
+      drawLineChart("emissions-chart", lastResult);
+      drawCostChart("cost-chart", lastResult);
+      drawDoughnut("breakdown-keep", [
+        { label: "Fuel", value: lastResult.keep.fuel, color: COLORS.fuel },
+        { label: "Maintenance", value: lastResult.keep.maintenance, color: COLORS.maint },
+      ], lastResult.keep.total);
+      drawDoughnut("breakdown-switch", [
+        { label: "Manufacturing", value: lastResult.ev.manufacturing, color: COLORS.mfg },
+        { label: "Electricity", value: lastResult.ev.driving, color: COLORS.driving },
+        { label: "Maintenance", value: lastResult.ev.maintenance, color: COLORS.maint },
+      ], lastResult.ev.total);
     }
   }, 200);
 });
+
+document.getElementById("share-copy").addEventListener("click", async () => {
+  const input = document.getElementById("share-url");
+  const button = document.getElementById("share-copy");
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch (_) {
+    input.select();
+  }
+  button.textContent = "Copied";
+  setTimeout(() => { button.textContent = "Copy link"; }, 1500);
+});
+
+const sharedId = new URLSearchParams(location.search).get("id");
+if (sharedId) loadShared(sharedId);
+loadHistory();

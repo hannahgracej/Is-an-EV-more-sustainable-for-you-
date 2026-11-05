@@ -1,4 +1,18 @@
 /*
+  Shared by the browser (global EV_DATA from data.js) and the Lambda (require).
+  Keep the two call sites in sync: the API is authoritative for saved results,
+  and the page uses this same function only when the API cannot be reached.
+
+  The catalog names are read inside the function. A top-level const with the
+  same name as data.js would be a duplicate declaration in the browser, where
+  classic scripts share one global scope.
+*/
+function engineData() {
+  if (typeof module !== "undefined" && module.exports) return require("./data.js");
+  return globalThis.EV_DATA;
+}
+
+/*
   Carbon comparison calculation engine.
 
   Key principles:
@@ -11,6 +25,20 @@
 */
 
 function runComparison(inputs) {
+  const {
+    EV_MODELS,
+    FUEL_CO2_PER_GALLON,
+    UPSTREAM_FACTOR,
+    estimateMPG,
+    GRID_INTENSITY,
+    MAINTENANCE_CO2,
+    FUEL_PRICE_PER_GALLON,
+    ELECTRICITY_PRICE,
+    MAINTENANCE_COST,
+    INSURANCE_COST,
+    FEDERAL_EV_CREDIT,
+  } = engineData();
+
   const {
     curFuel, curYear, curSize, curMPG, curMilesPerYear, curAgeOwned,
     evModel, evMilesPerYear, evYears, gridMix,
@@ -169,4 +197,81 @@ function runComparison(inputs) {
       elecPrice,
     },
   };
+}
+
+/*
+  Three different models for someone who has not picked one.
+  Most cost savings and lowest total cost are the same ranking: the car you
+  keep costs the same amount no matter which EV you compare it with. The
+  third suggestion is the best remaining carbon cut that still costs less
+  than keeping the current car, when one exists.
+*/
+function suggestModels(baseInputs) {
+  const { EV_MODELS } = engineData();
+  const ranked = EV_MODELS.map((model) => {
+    const result = runComparison(Object.assign({}, baseInputs, {
+      evModel: model.name,
+      evPrice: 0,
+    }));
+    return {
+      name: model.name,
+      range: model.range,
+      battery: model.battery,
+      msrp: model.msrp,
+      carbonSavings: result.savings,
+      costSavings: result.cost.savings,
+      totalCost: result.cost.ev.total,
+      annualRunning: result.cost.ev.annualRunning,
+      effectivePrice: result.cost.ev.effectivePrice,
+    };
+  });
+
+  function best(rows, compare) {
+    return rows.slice().sort(compare)[0];
+  }
+
+  const byCarbon = (a, b) => b.carbonSavings - a.carbonSavings || b.costSavings - a.costSavings;
+  const byCost = (a, b) => b.costSavings - a.costSavings || b.carbonSavings - a.carbonSavings;
+  const byBalance = (a, b) => {
+    const aSaves = a.costSavings > 0 ? 1 : 0;
+    const bSaves = b.costSavings > 0 ? 1 : 0;
+    if (aSaves !== bSaves) return bSaves - aSaves;
+    return b.carbonSavings - a.carbonSavings || b.costSavings - a.costSavings;
+  };
+
+  const carbon = best(ranked, byCarbon);
+  const costWinner = best(ranked, byCost);
+  const cost = best(ranked.filter((row) => row.name !== carbon.name), byCost);
+  const balance = best(
+    ranked.filter((row) => row.name !== carbon.name && row.name !== cost.name),
+    byBalance,
+  );
+
+  return [
+    Object.assign({
+      category: "carbon",
+      label: "Most carbon savings",
+      detail: carbon.name === costWinner.name
+        ? "Cuts the most CO\u2082 versus keeping your car, and saves the most money too."
+        : "Cuts the most CO\u2082 versus keeping your car.",
+    }, carbon),
+    Object.assign({
+      category: "cost",
+      label: "Most cost savings",
+      detail: carbon.name === costWinner.name
+        ? "The next-lowest total cost after the carbon leader. Lowest total cost and most cost savings are the same ranking."
+        : "Saves the most money versus keeping your car. That is also the lowest total cost over this period.",
+    }, cost),
+    Object.assign({
+      category: "balance",
+      label: "Best of both",
+      detail: balance.costSavings > 0
+        ? "The next-strongest CO\u2082 cut among cars that still cost less than keeping yours."
+        : "The next-strongest CO\u2082 cut after the first two suggestions.",
+    }, balance),
+  ];
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { runComparison, suggestModels };
 }

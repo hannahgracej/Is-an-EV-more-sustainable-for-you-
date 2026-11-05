@@ -1,0 +1,8 @@
+{
+  "name": "ev-compare",
+  "private": true,
+  "scripts": {
+    "start": "node backend/local-server.js",
+    "test": "node --test backend/test/handler.test.js"
+  }
+}
