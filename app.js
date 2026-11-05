@@ -3,20 +3,22 @@
 */
 
 (function () {
-  // Populate year dropdown (2000–2026)
+  // Years are in the page so the menu still opens if this script fails to run.
   const yearSelect = document.getElementById("cur-year");
-  const frag = document.createDocumentFragment();
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Select\u2026";
-  frag.appendChild(placeholder);
-  for (let y = 2026; y >= 2000; y--) {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    frag.appendChild(opt);
+  if (yearSelect.options.length === 0) {
+    const frag = document.createDocumentFragment();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select\u2026";
+    frag.appendChild(placeholder);
+    for (let y = 2026; y >= 2000; y--) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      frag.appendChild(opt);
+    }
+    yearSelect.appendChild(frag);
   }
-  yearSelect.appendChild(frag);
 
   // Populate EV model dropdown
   const evSelect = document.getElementById("ev-model");
@@ -27,23 +29,8 @@
     evSelect.appendChild(opt);
   });
 
-  // Auto-fill EV specs when a real model is chosen.
-  // The "suggest" option is an action, so the select snaps back to the last model.
+  // Auto-fill EV specs when model changes
   evSelect.addEventListener("change", function () {
-
-    if (this.value === "suggest") {
-      this.value = this.dataset.model || "";
-      requestSuggestions();
-      return;
-    }
-    if (!this.value) {
-      this.dataset.model = "";
-      return;
-    }
-    this.dataset.model = this.value;
-    suggesting = false;
-    hideSuggestions();
-
     const ev = EV_MODELS.find(m => m.name === this.value);
     document.getElementById("ev-range").value = ev ? ev.range : "";
     document.getElementById("ev-battery").value = ev ? ev.battery : "";
@@ -51,11 +38,6 @@
     markSelectedSuggestion(this.value);
   });
 
-  document.getElementById("suggest-btn").addEventListener("click", requestSuggestions);
-
-  ["grid-mix", "ev-miles", "ev-years", "elec-price", "federal-credit", "state-credit", "incentive-state"].forEach((id) => {
-    document.getElementById(id).addEventListener("change", scheduleSuggestions);
-    document.getElementById(id).addEventListener("input", scheduleSuggestions);
   document.getElementById("suggest-btn").addEventListener("click", async function () {
     this.disabled = true;
     this.textContent = "Finding models\u2026";
@@ -125,11 +107,6 @@ function validateStep2() {
   const grid = document.getElementById("grid-mix").value;
   const miles = document.getElementById("ev-miles").value;
   const years = document.getElementById("ev-years").value;
-  if (!model && suggesting) {
-    revealSuggestions();
-    alert("Pick one of the three suggested models, or choose a model yourself.");
-    return false;
-  }
   if (!model || !grid || !miles || !years) {
     alert("Please fill in all required fields for the EV.");
     return false;
@@ -158,64 +135,10 @@ function gatherInputs() {
   };
 }
 
-let suggesting = false;
-let suggestTimer = null;
-let suggestGeneration = 0;
-
-function hideSuggestions() {
-  const panel = document.getElementById("suggestions");
-  const button = document.getElementById("suggest-btn");
-  if (panel) panel.hidden = true;
-  if (button) button.setAttribute("aria-expanded", "false");
-}
-
-function revealSuggestions() {
-  const panel = document.getElementById("suggestions");
-  const button = document.getElementById("suggest-btn");
-  panel.hidden = false;
-  if (button) button.setAttribute("aria-expanded", "true");
-  const rect = panel.getBoundingClientRect();
-  if (rect.top < 0 || rect.bottom > window.innerHeight) {
-    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-}
-
-function scheduleSuggestions() {
-  if (!suggesting) return;
-  clearTimeout(suggestTimer);
-  suggestTimer = setTimeout(loadSuggestions, 200);
 function markSelectedSuggestion(name) {
   document.querySelectorAll(".suggestion-card").forEach((card) => {
     card.classList.toggle("selected", card.getAttribute("data-model") === name);
   });
-}
-
-function missingSuggestionFields() {
-  const missing = [];
-  if (!document.getElementById("grid-mix").value) missing.push("your electricity grid");
-  if (!document.getElementById("ev-miles").value) missing.push("yearly miles");
-  if (!document.getElementById("ev-years").value) missing.push("how long you would keep the EV");
-  return missing;
-}
-
-function formatList(items) {
-  if (items.length === 1) return items[0];
-  if (items.length === 2) return items[0] + " and " + items[1];
-  return items.slice(0, -1).join(", ") + ", and " + items[items.length - 1];
-}
-
-async function requestSuggestions() {
-  suggesting = true;
-  const button = document.getElementById("suggest-btn");
-  button.disabled = true;
-  button.textContent = "Finding models\u2026";
-  clearTimeout(suggestTimer);
-  try {
-    await loadSuggestions();
-  } finally {
-    button.disabled = false;
-    button.textContent = "Suggest one for me";
-  }
 }
 
 function money(amount) {
@@ -244,7 +167,6 @@ function renderSuggestions(suggestions) {
   cards.querySelectorAll(".suggestion-card").forEach((button) => {
     button.addEventListener("click", () => chooseSuggestion(button.getAttribute("data-model")));
   });
-  revealSuggestions();
   panel.hidden = false;
   markSelectedSuggestion(document.getElementById("ev-model").value);
 }
@@ -256,21 +178,6 @@ function chooseSuggestion(name) {
   select.closest(".field").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-async function loadSuggestions() {
-  if (!suggesting) return;
-  const generation = ++suggestGeneration;
-  const status = document.getElementById("suggestions-status");
-  const cards = document.getElementById("suggestion-cards");
-  const missing = missingSuggestionFields();
-  cards.innerHTML = "";
-  if (missing.length) {
-    status.textContent = "Choose " + formatList(missing) + " and three models will show up here.";
-    revealSuggestions();
-    return;
-  }
-
-  status.textContent = "Comparing the catalog\u2026";
-  revealSuggestions();
 async function loadSuggestions(options) {
   const panel = document.getElementById("suggestions");
   const status = document.getElementById("suggestions-status");
@@ -304,7 +211,6 @@ async function loadSuggestions(options) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(inputs),
     });
-    if (!suggesting || generation !== suggestGeneration) return;
     const payload = await response.json().catch(() => ({}));
     if (response.ok && payload.suggestions) {
       renderSuggestions(payload.suggestions);
@@ -313,17 +219,8 @@ async function loadSuggestions(options) {
       status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP. Choose one for the full comparison.";
     } else if (response.status === 400) {
       status.textContent = payload.error || "Those details could not be compared.";
-      revealSuggestions();
-      return;
     }
   } catch (_) {
-    if (!suggesting || generation !== suggestGeneration) return;
-    try {
-      renderSuggestions(suggestModels(inputs));
-      status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP.";
-    } catch (err) {
-      status.textContent = err.message || "The suggestions could not be calculated.";
-      revealSuggestions();
     if (shown) {
       status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP. Choose one for the full comparison.";
     }
@@ -440,8 +337,7 @@ function present(result, inputs, id) {
   if (id) url.searchParams.set("id", id);
   else url.searchParams.delete("id");
   history.replaceState(null, "", url);
-  // Charts measure their container. The results step is hidden until this
-  // runs, so draw only after it is on screen.
+  // Charts measure their container, so the results step has to be visible first.
   goToStep(3);
   renderResults(result, inputs);
 }
