@@ -93,28 +93,9 @@
     <section id="step-ev" class="card step">
       <div class="step-badge">2</div>
       <h2>The EV You're Considering</h2>
-      <p class="step-desc">Pick an electric vehicle you're thinking about buying.</p>
+      <p class="step-desc">Start with how much you drive and where. Then pick a model, or ask for three suggestions.</p>
 
       <div class="form-grid">
-        <div class="field">
-          <label for="ev-model">EV Model</label>
-          <select id="ev-model">
-            <option value="">Select&hellip;</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="ev-range">EPA Range (miles)</label>
-          <input id="ev-range" type="number" min="50" max="600" placeholder="Auto-filled" readonly />
-          <span class="hint">Auto-filled from selected model</span>
-        </div>
-
-        <div class="field">
-          <label for="ev-battery">Battery Size (kWh)</label>
-          <input id="ev-battery" type="number" min="20" max="250" placeholder="Auto-filled" readonly />
-          <span class="hint">Auto-filled from selected model</span>
-        </div>
-
         <div class="field">
           <label for="ev-miles">Miles You'd Drive per Year</label>
           <input id="ev-miles" type="number" min="500" max="100000" placeholder="e.g. 12000" value="12000" />
@@ -143,23 +124,17 @@
         </div>
 
         <div class="field">
-          <label for="ev-price">EV Purchase Price ($)</label>
-          <input id="ev-price" type="number" min="15000" max="300000" step="100" placeholder="Auto-filled MSRP" />
-          <span class="hint">Auto-filled from model; edit to use your actual price</span>
+          <label for="incentive-state">Your State</label>
+          <select id="incentive-state">
+            <option value="none">Select state&hellip;</option>
+          </select>
+          <span class="hint">For state-level EV incentive lookup</span>
         </div>
 
         <div class="field">
           <label for="elec-price">Electricity Rate ($/kWh)</label>
           <input id="elec-price" type="number" min="0.01" max="1.00" step="0.01" placeholder="Auto from region" />
           <span class="hint">Leave blank for regional average</span>
-        </div>
-
-        <div class="field">
-          <label for="incentive-state">Your State</label>
-          <select id="incentive-state">
-            <option value="none">Select state&hellip;</option>
-          </select>
-          <span class="hint">For state-level EV incentive lookup</span>
         </div>
 
         <div class="field">
@@ -173,12 +148,42 @@
           <input id="state-credit" type="number" min="0" max="50000" step="100" placeholder="Auto from state" />
           <span class="hint">Auto-filled from state; edit for your specific rebate</span>
         </div>
-      </div>
 
-      <div id="suggestions" class="suggestions" hidden>
-        <h3>Three models for your situation</h3>
-        <p id="suggestions-status" class="hint"></p>
-        <div id="suggestion-cards" class="suggestion-cards"></div>
+        <div class="suggest-action">
+          <button type="button" class="btn secondary" id="suggest-btn">Suggest one for me</button>
+          <span class="hint">Uses the miles, grid, and state above, then you can still choose a model yourself.</span>
+        </div>
+
+        <div id="suggestions" class="suggestions" hidden>
+          <h3>Three models for this situation</h3>
+          <p id="suggestions-status" class="hint"></p>
+          <div id="suggestion-cards" class="suggestion-cards"></div>
+        </div>
+
+        <div class="field">
+          <label for="ev-model">EV Model</label>
+          <select id="ev-model">
+            <option value="">Select&hellip;</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="ev-range">EPA Range (miles)</label>
+          <input id="ev-range" type="number" min="50" max="600" placeholder="Auto-filled" readonly />
+          <span class="hint">Auto-filled from selected model</span>
+        </div>
+
+        <div class="field">
+          <label for="ev-battery">Battery Size (kWh)</label>
+          <input id="ev-battery" type="number" min="20" max="250" placeholder="Auto-filled" readonly />
+          <span class="hint">Auto-filled from selected model</span>
+        </div>
+
+        <div class="field">
+          <label for="ev-price">EV Purchase Price ($)</label>
+          <input id="ev-price" type="number" min="15000" max="300000" step="100" placeholder="Auto-filled MSRP" />
+          <span class="hint">Auto-filled from model; edit to use your actual price</span>
+        </div>
       </div>
 
       <div class="btn-row">
