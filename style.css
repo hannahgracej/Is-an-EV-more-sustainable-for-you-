@@ -116,6 +116,16 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 @media (max-width: 600px) { .model-picker { grid-template-columns: 1fr; } }
 
 .suggestions { margin-top: 1.25rem; clear: both; }
+.suggest-action {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: .25rem;
+}
+.suggestions { grid-column: 1 / -1; margin-top: .25rem; }
+.suggestion-card.selected { border-color: var(--accent); background: var(--accent-light); }
 .suggestions h3 { font-size: 1rem; margin-bottom: .25rem; }
 .suggestion-cards {
   display: grid;

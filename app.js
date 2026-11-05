@@ -20,10 +20,6 @@
 
   // Populate EV model dropdown
   const evSelect = document.getElementById("ev-model");
-  const suggestOpt = document.createElement("option");
-  suggestOpt.value = "suggest";
-  suggestOpt.textContent = "I'm not sure \u2014 suggest one for me";
-  evSelect.appendChild(suggestOpt);
   EV_MODELS.sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
     const opt = document.createElement("option");
     opt.value = m.name;
@@ -34,6 +30,7 @@
   // Auto-fill EV specs when a real model is chosen.
   // The "suggest" option is an action, so the select snaps back to the last model.
   evSelect.addEventListener("change", function () {
+
     if (this.value === "suggest") {
       this.value = this.dataset.model || "";
       requestSuggestions();
@@ -46,10 +43,12 @@
     this.dataset.model = this.value;
     suggesting = false;
     hideSuggestions();
+
     const ev = EV_MODELS.find(m => m.name === this.value);
     document.getElementById("ev-range").value = ev ? ev.range : "";
     document.getElementById("ev-battery").value = ev ? ev.battery : "";
     document.getElementById("ev-price").value = ev ? ev.msrp : "";
+    markSelectedSuggestion(this.value);
   });
 
   document.getElementById("suggest-btn").addEventListener("click", requestSuggestions);
@@ -57,6 +56,15 @@
   ["grid-mix", "ev-miles", "ev-years", "elec-price", "federal-credit", "state-credit", "incentive-state"].forEach((id) => {
     document.getElementById(id).addEventListener("change", scheduleSuggestions);
     document.getElementById(id).addEventListener("input", scheduleSuggestions);
+  document.getElementById("suggest-btn").addEventListener("click", async function () {
+    this.disabled = true;
+    this.textContent = "Finding models\u2026";
+    try {
+      await loadSuggestions({ scroll: true });
+    } finally {
+      this.disabled = false;
+      this.textContent = "Suggest one for me";
+    }
   });
 
   // Auto-fill electricity rate when grid region changes
@@ -176,6 +184,10 @@ function scheduleSuggestions() {
   if (!suggesting) return;
   clearTimeout(suggestTimer);
   suggestTimer = setTimeout(loadSuggestions, 200);
+function markSelectedSuggestion(name) {
+  document.querySelectorAll(".suggestion-card").forEach((card) => {
+    card.classList.toggle("selected", card.getAttribute("data-model") === name);
+  });
 }
 
 function missingSuggestionFields() {
@@ -233,12 +245,15 @@ function renderSuggestions(suggestions) {
     button.addEventListener("click", () => chooseSuggestion(button.getAttribute("data-model")));
   });
   revealSuggestions();
+  panel.hidden = false;
+  markSelectedSuggestion(document.getElementById("ev-model").value);
 }
 
 function chooseSuggestion(name) {
   const select = document.getElementById("ev-model");
   select.value = name;
   select.dispatchEvent(new Event("change"));
+  select.closest(".field").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 async function loadSuggestions() {
@@ -256,9 +271,33 @@ async function loadSuggestions() {
 
   status.textContent = "Comparing the catalog\u2026";
   revealSuggestions();
+async function loadSuggestions(options) {
+  const panel = document.getElementById("suggestions");
+  const status = document.getElementById("suggestions-status");
+  const cards = document.getElementById("suggestion-cards");
+  const grid = document.getElementById("grid-mix").value;
+  const miles = document.getElementById("ev-miles").value;
+  const years = document.getElementById("ev-years").value;
+  panel.hidden = false;
+  if (!grid || !miles || !years) {
+    cards.innerHTML = "";
+    status.textContent = "Choose your electricity grid, yearly miles, and how long you would keep the EV.";
+    if (options && options.scroll) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    return;
+  }
+
   const inputs = gatherInputs();
   inputs.evPrice = 0;
   delete inputs.evModel;
+
+  let shown = false;
+  try {
+    renderSuggestions(suggestModels(inputs));
+    shown = true;
+  } catch (err) {
+    status.textContent = err.message || "The suggestions could not be calculated.";
+  }
+
   try {
     const response = await fetch(apiUrl("/suggestions"), {
       method: "POST",
@@ -267,13 +306,16 @@ async function loadSuggestions() {
     });
     if (!suggesting || generation !== suggestGeneration) return;
     const payload = await response.json().catch(() => ({}));
-    if (response.status === 400) {
+    if (response.ok && payload.suggestions) {
+      renderSuggestions(payload.suggestions);
+      shown = true;
+    } else if (shown) {
+      status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP. Choose one for the full comparison.";
+    } else if (response.status === 400) {
       status.textContent = payload.error || "Those details could not be compared.";
       revealSuggestions();
       return;
     }
-    if (!response.ok || !payload.suggestions) throw new Error("offline");
-    renderSuggestions(payload.suggestions);
   } catch (_) {
     if (!suggesting || generation !== suggestGeneration) return;
     try {
@@ -282,8 +324,12 @@ async function loadSuggestions() {
     } catch (err) {
       status.textContent = err.message || "The suggestions could not be calculated.";
       revealSuggestions();
+    if (shown) {
+      status.textContent = "Compared in this browser because the API was unreachable. Each price uses that model\u2019s MSRP. Choose one for the full comparison.";
     }
   }
+
+  if (options && options.scroll) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 let lastResult = null;
