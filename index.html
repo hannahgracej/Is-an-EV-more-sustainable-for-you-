@@ -110,7 +110,10 @@
         </div>
       </div>
 
-      <button class="btn primary" onclick="goToStep(2)">Next &rarr;</button>
+      <div class="btn-row">
+        <p id="step1-error" class="form-error" role="alert" hidden></p>
+        <button type="button" class="btn primary" onclick="goToStep(2)">Next &rarr;</button>
+      </div>
 
       <div id="history" class="history" hidden>
         <h3>Your recent comparisons</h3>
@@ -216,8 +219,9 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn secondary" onclick="goToStep(1)">&larr; Back</button>
-        <button class="btn primary" id="analyze-btn" onclick="runAnalysis()">Analyze</button>
+        <p id="step2-error" class="form-error" role="alert" hidden></p>
+        <button type="button" class="btn secondary" onclick="goToStep(1)">&larr; Back</button>
+        <button type="button" class="btn primary" id="analyze-btn" onclick="runAnalysis()">Analyze</button>
       </div>
     </section>
 

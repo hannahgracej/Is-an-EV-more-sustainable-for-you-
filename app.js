@@ -90,29 +90,107 @@ function goToStep(n) {
   }
 }
 
-function validateStep1() {
-  const fuel = document.getElementById("cur-fuel").value;
-  const year = document.getElementById("cur-year").value;
-  const size = document.getElementById("cur-size").value;
-  const miles = document.getElementById("cur-miles").value;
-  if (!fuel || !year || !size || !miles) {
-    alert("Please fill in all required fields for your current car.");
-    return false;
+/*
+  Validation shows its messages on the page, next to the fields, instead of
+  alert(). Many embedded and in-app browsers (LinkedIn's included) silently
+  block alert(), which made the Next button look like it did nothing.
+  Ranges match backend/lambda/validate.js so the page and API agree.
+*/
+const STEP_FIELDS = {
+  1: [
+    { id: "cur-fuel", label: "Fuel type", required: true },
+    { id: "cur-year", label: "Model year", required: true },
+    { id: "cur-size", label: "Vehicle size", required: true },
+    { id: "cur-mpg", label: "Fuel economy", min: 5, max: 80 },
+    { id: "cur-miles", label: "Miles driven per year", required: true, min: 500, max: 100000, whole: true },
+    { id: "cur-age", label: "Years you've owned it", min: 0, max: 40, whole: true },
+    { id: "gas-price", label: "Fuel price", min: 1, max: 10 },
+    { id: "trade-in", label: "Trade-in value", min: 0, max: 200000 },
+  ],
+  2: [
+    { id: "ev-miles", label: "Miles you'd drive per year", required: true, min: 500, max: 100000, whole: true },
+    { id: "ev-years", label: "Years you plan to keep it", required: true, min: 1, max: 30, whole: true },
+    { id: "grid-mix", label: "Electricity grid", required: true },
+    { id: "elec-price", label: "Electricity rate", min: 0.01, max: 1 },
+    { id: "federal-credit", label: "Federal tax credit", min: 0, max: 50000 },
+    { id: "state-credit", label: "State / local incentive", min: 0, max: 50000 },
+    { id: "ev-model", label: "EV model", required: true },
+    { id: "ev-price", label: "EV purchase price", min: 15000, max: 300000 },
+  ],
+};
+
+function fieldProblem(spec) {
+  const el = document.getElementById(spec.id);
+  const raw = el.value.trim();
+  if (el.validity && el.validity.badInput) return "must be a number";
+  if (raw === "") return spec.required ? "is required" : null;
+  if (spec.min === undefined) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return "must be a number";
+  if (n < spec.min || n > spec.max) {
+    return "must be between " + spec.min.toLocaleString() + " and " + spec.max.toLocaleString();
   }
-  return true;
+  if (spec.whole && !Number.isInteger(n)) return "must be a whole number";
+  return null;
 }
 
-function validateStep2() {
-  const model = document.getElementById("ev-model").value;
-  const grid = document.getElementById("grid-mix").value;
-  const miles = document.getElementById("ev-miles").value;
-  const years = document.getElementById("ev-years").value;
-  if (!model || !grid || !miles || !years) {
-    alert("Please fill in all required fields for the EV.");
-    return false;
+function setFieldError(id, message) {
+  const el = document.getElementById(id);
+  const field = el.closest(".field");
+  el.setAttribute("aria-invalid", message ? "true" : "false");
+  if (!field) return;
+  field.classList.toggle("invalid", !!message);
+  let note = field.querySelector(".field-error");
+  if (message && !note) {
+    note = document.createElement("span");
+    note.className = "field-error";
+    field.appendChild(note);
   }
-  return true;
+  if (note) {
+    note.textContent = message || "";
+    note.hidden = !message;
+  }
 }
+
+function showStepError(step, message) {
+  const box = document.getElementById("step" + step + "-error");
+  if (!box) return;
+  box.textContent = message || "";
+  box.hidden = !message;
+}
+
+function validateStep(step) {
+  const problems = [];
+  STEP_FIELDS[step].forEach((spec) => {
+    const problem = fieldProblem(spec);
+    setFieldError(spec.id, problem ? spec.label + " " + problem + "." : null);
+    if (problem) problems.push(spec);
+  });
+  if (!problems.length) {
+    showStepError(step, null);
+    return true;
+  }
+  showStepError(step, problems.length === 1
+    ? "Please fix the highlighted field: " + problems[0].label + "."
+    : "Please fix the " + problems.length + " highlighted fields.");
+  const first = document.getElementById(problems[0].id);
+  first.focus({ preventScroll: true });
+  first.closest(".field").scrollIntoView({ behavior: "smooth", block: "center" });
+  return false;
+}
+
+function validateStep1() { return validateStep(1); }
+function validateStep2() { return validateStep(2); }
+
+// Clear a field's error as soon as the user changes it.
+Object.values(STEP_FIELDS).flat().forEach((spec) => {
+  const el = document.getElementById(spec.id);
+  const clear = () => {
+    if (el.getAttribute("aria-invalid") === "true" && !fieldProblem(spec)) setFieldError(spec.id, null);
+  };
+  el.addEventListener("input", clear);
+  el.addEventListener("change", clear);
+});
 
 function gatherInputs() {
   return {
@@ -182,13 +260,12 @@ async function loadSuggestions(options) {
   const panel = document.getElementById("suggestions");
   const status = document.getElementById("suggestions-status");
   const cards = document.getElementById("suggestion-cards");
-  const grid = document.getElementById("grid-mix").value;
-  const miles = document.getElementById("ev-miles").value;
-  const years = document.getElementById("ev-years").value;
   panel.hidden = false;
-  if (!grid || !miles || !years) {
+  const needed = STEP_FIELDS[2].filter((s) => ["grid-mix", "ev-miles", "ev-years"].includes(s.id));
+  const bad = needed.map((s) => [s, fieldProblem(s)]).filter(([, p]) => p);
+  if (bad.length) {
     cards.innerHTML = "";
-    status.textContent = "Choose your electricity grid, yearly miles, and how long you would keep the EV.";
+    status.textContent = bad.map(([s, p]) => s.label + " " + p + ".").join(" ");
     if (options && options.scroll) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     return;
   }
@@ -394,13 +471,13 @@ async function runAnalysis() {
     loadHistory();
   } catch (e) {
     if (!e.offline) {
-      alert(e.message);
+      showStepError(2, e.message);
       return;
     }
     try {
       present(runComparison(inputs), inputs, null);
     } catch (calcError) {
-      alert("Error: " + calcError.message);
+      showStepError(2, "Error: " + calcError.message);
     }
   } finally {
     button.disabled = false;

@@ -91,6 +91,13 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 .field select:focus, .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 .field input[readonly] { background: #f8fafc; color: var(--muted); }
 .field .hint { font-size: .75rem; color: #94a3b8; }
+.field.invalid select, .field.invalid input { border-color: var(--red); }
+.field.invalid select:focus, .field.invalid input:focus { box-shadow: 0 0 0 3px var(--red-bg); }
+.field-error { font-size: .78rem; font-weight: 500; color: var(--red); }
+.form-error {
+  margin-right: auto; align-self: center;
+  color: var(--red); font-size: .9rem; font-weight: 500;
+}
 
 .btn {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -150,7 +157,7 @@ main { max-width: 860px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; position
 .suggestion-use { margin-top: .35rem; font-weight: 600; color: var(--accent) !important; }
 @media (max-width: 700px) { .suggestion-cards { grid-template-columns: 1fr; } }
 
-.btn-row { display: flex; gap: 1rem; margin-top: 2rem; justify-content: flex-end; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; justify-content: flex-end; }
 .step > .btn { margin-top: 2rem; float: right; }
 
 /* Results */
